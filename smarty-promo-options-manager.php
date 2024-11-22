@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:             SM - Promo Options Manager for WooCommerce
- * Plugin URI:              https://github.com/mnestorov/smarty-promo-options-manager-for-woocommerce
+ * Plugin URI:              https://github.com/mnestorov/smarty-promo-options-manager
  * Description:             
  * Version:                 1.0.0
  * Author:                  Smarty Studio | Martin Nestorov
