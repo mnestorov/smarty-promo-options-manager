@@ -310,6 +310,61 @@ if (!function_exists('smarty_po_label_shortcode')) {
     add_shortcode('smarty_po_label', 'smarty_po_label_shortcode');
 }
 
+if (!function_exists('smarty_po_get_variation_label')) {
+    /**
+     * Generates a promotional label for a specific WooCommerce product variation.
+     *
+     * This function calculates the total discount percentage for a variation, including 
+     * an additional discount, and returns the styled promotional label HTML.
+     *
+     * @param int $variation_id The ID of the WooCommerce product variation.
+     * @param int $additional_discount The additional discount percentage to apply (default: 15).
+     *
+     * @return string The generated promotional label HTML, or an empty string if the variation does not exist.
+     *
+     * Example Output:
+     * <div class="po-text">
+     *     <span class="number" style="background-color:#ffffff;color:#222222;">-30%</span>
+     *     <span class="text" style="background-color:#222222;color:#ffffff;">Use promo code BLACK15</span>
+     * </div>
+     */
+    function smarty_po_get_variation_label($variation_id, $additional_discount = 15) {
+        // Fetch variation product object
+        $single_variation = new WC_Product_Variation($variation_id);
+
+        // Check if variation exists
+        if (!$single_variation->exists()) {
+            return '';
+        }
+
+        // Get prices
+        $regular_price = (float) $single_variation->get_regular_price();
+        $sale_price = (float) $single_variation->get_price();
+
+        // Get plugin settings
+        $po_border_color = get_option('smarty_po_border_color', '#222222');
+        $po_bg_color = get_option('smarty_po_bg_color', '#222222');
+        $po_text_color = get_option('smarty_po_text_color', '#ffffff');
+        $po_text = get_option('smarty_po_text', 'Use promo code BLACK15');
+
+        // Calculate base discount percentage
+        $discount_percentage = 0;
+        if ($regular_price > 0 && $sale_price < $regular_price) {
+            $discount_percentage = round((($regular_price - $sale_price) / $regular_price) * 100);
+        }
+
+        // Add additional discount
+        $total_discount = $discount_percentage > 0 ? $discount_percentage + $additional_discount : $additional_discount;
+
+        // Generate label content
+        $label_text = "<span class='number' style='background-color:{$po_text_color};color:{$po_bg_color};'>-{$total_discount}%</span>";
+        $label_text .= " <span class='text' style='background-color:{$po_bg_color};color:{$po_text_color};'>{$po_text}</span>";
+
+        // Return the label HTML
+        return '<div class="po-text">' . $label_text . '</div>';
+    }
+}
+
 if (!function_exists('smarty_po_admin_css')) {
     /**
      * Outputs admin CSS styles for the plugin settings page.
