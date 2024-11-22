@@ -14,18 +14,72 @@ You can send me money on Revolut by following this link: https://revolut.me/mnes
 
 ## Overview
 
+The **Promo Options Manager for WooCommerce** plugin empowers online store owners to create and customize promotional labels for their WooCommerce products. It seamlessly integrates with WordPress and WooCommerce to help boost conversions by highlighting discounts and promotional offers effectively.
 
+### Key Highlights:
+- Fully customizable promotional labels with colors, text, and styles.
+- Add default and additional discount percentages to products and variations.
+- Responsive design for optimal display across devices.
+- Translation-ready for global eCommerce.
 
 ## Features
 
-
+- **Dynamic Discount Calculations**: Combines existing sale discounts with an additional customizable percentage.
+- **Customizable Design**: Adjust the label colors, fonts, and sizes to match your store branding.
+- **Multi-Variation Support**: Works seamlessly with WooCommerce product variations.
+- **Shortcode Functionality**: Easily display promotional labels with `[smarty_po_label]` shortcode.
+- **Free Delivery Indicators**: Highlight free delivery options above a certain price threshold.
+- **Translation-Ready**: Add translations directly to the `languages` directory.
 
 ## Installation
 
+1. **Download the Plugin**:
+   - Clone the repository or [download the latest release](https://github.com/mnestorov/smarty-promo-options-manager/releases).
+   
+2. **Install via WordPress Admin**:
+   - Go to `Plugins > Add New`.
+   - Click `Upload Plugin` and select the ZIP file of this plugin.
+   - Click `Install Now` and activate the plugin.
+
+3. **Install via FTP**:
+   - Extract the plugin ZIP file.
+   - Upload the extracted folder to your `/wp-content/plugins/` directory.
+   - Activate the plugin from the WordPress admin.
 
 ## Usage
 
+### How to Use the Shortcode
 
+To display the promotional label, use the shortcode:
+
+```php
+[smarty_po_label]
+```
+
+The shortcode automatically adapts to product variations on WooCommerce pages.
+
+### Using the Plugin in Templates
+
+The plugin provides utility functions like `smarty_po_get_variation_label()` to generate promotional labels for specific product variations.
+
+Example usage in a template:
+
+```php
+echo smarty_po_get_variation_label($variation_id, 15);
+```
+
+## Configuration
+
+Navigate to WooCommerce > Promo Options Manager in the WordPress admin dashboard.
+
+Customize the following settings:
+
+- Label Text: Specify the promotional message to display (e.g., "Use promo code BLACK15").
+- Additional Discount: Set the default additional discount percentage.
+- Colors: Adjust the background and text colors for the labels.
+- Font Sizes: Configure font sizes for desktop and mobile views.
+
+Save your settings and view your labels on product and shop pages.
 
 ## Requirements
 
