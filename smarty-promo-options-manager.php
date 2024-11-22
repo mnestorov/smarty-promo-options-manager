@@ -19,6 +19,11 @@ if (!defined('WPINC')) {
 }
 
 if (!function_exists('smarty_po_enqueue_scripts')) {
+    /**
+     * Enqueues admin scripts and styles for the settings page.
+     *
+     * @param string $hook_suffix The current admin page hook suffix.
+     */
     function smarty_po_enqueue_scripts($hook_suffix) {
         // Only add to the admin page of the plugin
         if ('woocommerce_page_smarty-po-settings' !== $hook_suffix) {
@@ -36,36 +41,55 @@ if (!function_exists('smarty_po_enqueue_scripts')) {
 }
 
 if (!function_exists('smarty_po_register_settings')) {
+    /**
+     * Registers settings, sections, and fields for the plugin.
+     */
     function smarty_po_register_settings() {
         // Register settings
-        register_setting('smarty_po_settings_group', 'smarty_po_active_border_color');
+        register_setting('smarty_po_settings_group', 'smarty_po_enable_labels', [
+            'type'              => 'string',
+            'sanitize_callback' => function($value) {
+                return $value === '1' ? '1' : '0';
+            },
+            'default' => '1'
+        ]);
+        register_setting('smarty_po_settings_group', 'smarty_po_border_color');
         register_setting('smarty_po_settings_group', 'smarty_po_bg_color');
         register_setting('smarty_po_settings_group', 'smarty_po_text_color');
         register_setting('smarty_po_settings_group', 'smarty_po_text');
         register_setting('smarty_po_settings_group', 'smarty_po_number');
-        register_setting('smarty_po_settings_group', 'smarty_po_font_size');
+        register_setting('smarty_po_settings_group', 'smarty_po_d_font_size');
+        register_setting('smarty_po_settings_group', 'smarty_po_m_font_size');
         
         // Add settings sections
+        add_settings_section('smarty_po_general_section', 'General', 'smarty_po_general_section_cb', 'smarty_po_settings_page');
         add_settings_section('smarty_po_colors_section', 'Colors', 'smarty_po_colors_section_cb', 'smarty_po_settings_page');
         add_settings_section('smarty_po_font_sizes_section', 'Font Sizes', 'smarty_po_font_sizes_section_cb', 'smarty_po_settings_page');
-        add_settings_section('smarty_po_text_section', 'Promo Text', 'smarty_po_text_section_cb', 'smarty_po_settings_page');
+        add_settings_section('smarty_po_text_section', 'Custom Text', 'smarty_po_text_section_cb', 'smarty_po_settings_page');
+
+        // Add settings field for disable/enable labels
+        add_settings_field('smarty_po_enable_labels', 'Disable/Enable', 'smarty_po_checkbox_field_cb', 'smarty_po_settings_page', 'smarty_po_general_section', ['id' => 'smarty_po_enable_labels']);
 
         // Add settings fields for colors
-        add_settings_field('smarty_po_active_border_color', 'Border', 'smarty_po_color_field_cb', 'smarty_po_settings_page', 'smarty_po_colors_section', ['id' => 'smarty_po_active_border_color']);
+        add_settings_field('smarty_po_border_color', 'Border', 'smarty_po_color_field_cb', 'smarty_po_settings_page', 'smarty_po_colors_section', ['id' => 'smarty_po_border_color']);
         add_settings_field('smarty_po_bg_color', 'Background', 'smarty_po_color_field_cb', 'smarty_po_settings_page', 'smarty_po_colors_section', ['id' => 'smarty_po_bg_color']);
-        add_settings_field('smarty_po_text_color', 'Text', 'smarty_po_color_field_cb', 'smarty_po_settings_page', 'smarty_po_colors_section', ['id' => 'smarty_po__text_color']);
+        add_settings_field('smarty_po_text_color', 'Text', 'smarty_po_color_field_cb', 'smarty_po_settings_page', 'smarty_po_colors_section', ['id' => 'smarty_po_text_color']);
         
         // Add settings fields for font sizes
-        add_settings_field('smarty_po_font_size', 'Additional Label', 'smarty_font_size_field_cb', 'smarty_po_settings_page', 'smarty_font_sizes_section', ['id' => 'smarty_po_font_size']);
-        
+        add_settings_field('smarty_po_d_font_size', 'Promo Text (Desktop)', 'smarty_po_d_font_size_field_cb', 'smarty_po_settings_page', 'smarty_po_font_sizes_section', ['id' => 'smarty_po_d_font_size']);
+        add_settings_field('smarty_po_m_font_size', 'Promo Text (Mobile)', 'smarty_po_m_font_size_field_cb', 'smarty_po_settings_page', 'smarty_po_font_sizes_section', ['id' => 'smarty_po_m_font_size']);
+
         // Add settings field for promo options text and number
-        add_settings_field('smarty_po_text', 'Text', 'smarty_po_text_field_cb', 'smarty_po_settings_page', 'smarty_po_text_section');
-        add_settings_field('smarty_po_number', 'Number', 'smarty_po_number_field_cb', 'smarty_po_settings_page', 'smarty_po_text_section');
+        add_settings_field('smarty_po_text', 'Promo Label', 'smarty_po_text_field_cb', 'smarty_po_settings_page', 'smarty_po_text_section');
+        add_settings_field('smarty_po_number', 'Promo Percent', 'smarty_po_number_field_cb', 'smarty_po_settings_page', 'smarty_po_text_section');
     }
     add_action('admin_init', 'smarty_po_register_settings');
 }
 
 if (!function_exists('smarty_po_register_settings_page')) {
+    /**
+     * Registers the plugin settings page in the WooCommerce menu.
+     */
     function smarty_po_register_settings_page() {
         add_submenu_page(
             'woocommerce',
@@ -79,13 +103,38 @@ if (!function_exists('smarty_po_register_settings_page')) {
     add_action('admin_menu', 'smarty_po_register_settings_page');
 }
 
+if (!function_exists('smarty_po_general_section_cb')) {
+    function smarty_po_general_section_cb() {
+        echo '<p>Enable or disable promo labels for products.</p>';
+    }
+}
+
+if (!function_exists('smarty_po_checkbox_field_cb')) {
+    function smarty_po_checkbox_field_cb($args) {
+        $option = get_option($args['id'], '');
+        $checked = checked(1, $option, false);
+        echo "<label class='smarty-toggle-switch'>";
+        echo "<input type='checkbox' id='{$args['id']}' name='{$args['id']}' value='1' {$checked} />";
+        echo "<span class='smarty-slider round'></span>";
+        echo "</label>";
+    }
+}
+
 if (!function_exists('smarty_po_colors_section_cb')) {
+    /**
+     * Callback for the colors section description.
+     */
     function smarty_po_colors_section_cb() {
         echo '<p>Customize the colors for promo elements in your WooCommerce shop and single product pages.</p>';
     }
 }
 
 if (!function_exists('smarty_po_color_field_cb')) {
+    /**
+     * Callback for rendering color input fields.
+     *
+     * @param array $args Arguments for the field.
+     */
     function smarty_po_color_field_cb($args) {
         $option = get_option($args['id'], '');
         echo '<input type="text" name="' . $args['id'] . '" value="' . esc_attr($option) . '" class="smarty-po-color-field" data-default-color="' . esc_attr($option) . '" />';
@@ -93,36 +142,75 @@ if (!function_exists('smarty_po_color_field_cb')) {
 }
 
 if (!function_exists('smarty_po_font_sizes_section_cb')) {
+    /**
+     * Callback for the font sizes section description.
+     */
     function smarty_po_font_sizes_section_cb() {
         echo '<p>Customize the font sizes for promo elements in your WooCommerce shop and single product pages.</p>';
     }
 }
 
-if (!function_exists('smarty_po_font_size_field_cb')) {
-    function smarty_po_font_size_field_cb($args) {
+if (!function_exists('smarty_po_d_font_size_field_cb')) {
+    /**
+     * Callback for rendering desktop font size input.
+     *
+     * @param array $args Arguments for the field.
+     */
+    function smarty_po_d_font_size_field_cb($args) {
         $option = get_option($args['id'], '14');
         echo '<input type="range" name="' . $args['id'] . '" min="10" max="30" value="' . esc_attr($option) . '" class="smarty-po-font-size-slider" />';
         echo '<span id="' . $args['id'] . '-value">' . esc_attr($option) . 'px</span>';
     }
 }
 
+if (!function_exists('smarty_po_m_font_size_field_cb')) {
+    /**
+     * Callback for rendering mobile font size input.
+     *
+     * @param array $args Arguments for the field.
+     */
+    function smarty_po_m_font_size_field_cb($args) {
+        $option = get_option($args['id'], '14');
+        echo '<input type="range" name="' . $args['id'] . '" min="10" max="30" value="' . esc_attr($option) . '" class="smarty-po-font-size-slider" />';
+        echo '<span id="' . $args['id'] . '-value">' . esc_attr($option) . 'px</span>';
+    }
+}
+
+if (!function_exists('smarty_po_text_section_cb')) {
+    /**
+     * Callback for the text section description.
+     */
+    function smarty_po_text_section_cb() {
+        echo '<p>Use custom text for promo label.</p>';
+    }
+}
+
 if (!function_exists('smarty_po_text_field_cb')) {
+    /**
+     * Callback for rendering the promo text input field.
+     */
     function smarty_po_text_field_cb($args) {
-        $option = get_option($args['id'], ''); // Default is empty
-        echo '<input type="text" name="' . $args['id'] . '" value="' . esc_attr($option) . '" />';
+        $option = get_option('smarty_po_text', 'Example text'); // Default is empty
+        echo '<input type="text" name="smarty_po_text" value="' . esc_attr($option) . '" />';
         echo '<p class="description">Set the text for promo label.</p>';
     }
 }
 
 if (!function_exists('smarty_po_number_field_cb')) {
+    /**
+     * Callback for rendering the promo number input field.
+     */
     function smarty_po_number_field_cb() {
         $option = get_option('smarty_po_number');
         echo '<input type="number" step="0.01" name="smarty_po_number" value="' . esc_attr($option) . '" />';
-        echo '<p class="description">Set the amount required for label promo percent.</p>';
+        echo '<p class="description">Set the amount required for promo label percent.</p>';
     }
 }
 
 if (!function_exists('smarty_po_settings_page_content')) {
+    /**
+     * Renders the plugin settings page content.
+     */
     function smarty_po_settings_page_content() {
         ?>
        <div class="wrap">
@@ -164,6 +252,11 @@ if (!function_exists('smarty_po_settings_page_content')) {
 }
 
 if (!function_exists('smarty_po_label_shortcode')) {
+    /**
+     * Shortcode to display a promotional label for WooCommerce products.
+     *
+     * @return string The generated HTML for the promotional label or an empty string if not on a product page.
+     */
     function smarty_po_label_shortcode() {
         global $product;
 
@@ -172,6 +265,7 @@ if (!function_exists('smarty_po_label_shortcode')) {
         }
 
         // Get plugin settings
+        $po_border_color = get_option('smarty_po_border_color', '#222222');
         $po_bg_color = get_option('smarty_po_bg_color', '#222222');
         $po_text_color = get_option('smarty_po_text_color', '#ffffff');
         $po_text = get_option('smarty_po_text', 'Use promo code TEST123');
@@ -216,65 +310,152 @@ if (!function_exists('smarty_po_label_shortcode')) {
     add_shortcode('smarty_po_label', 'smarty_po_label_shortcode');
 }
 
-function smarty_po_public_css() {
-    // Check if the current page is the WooCommerce shop page
-    if (is_shop() || is_product()) {
-        // Retrieve custom options for the promo styles
-        $po_bg_color = get_option('smarty_po_bg_color', '#222222');
-        $po_text_color = get_option('smarty_po_text_color', '#ffffff');
-        $po_d_font_size = get_option('smarty_po_d_font_size', '16');
-        $po_m_font_size = get_option('smarty_po_m_font_size', '14'); ?>
-
-        <style>
-            .po-text {
-                position: relative;
-                top: 5px;
-                font-weight: bold;
-                display: flex;
-                z-index: 10;
-                border-radius: 10px;
-            }
-
-            .po-text .number {
-                background-color: <?php echo esc_attr($po_bg_color); ?>;
-                color: <?php echo esc_attr($po_text_color); ?>;
-                font-size: <?php echo esc_attr($po_d_font_size); ?>px;
-                align-content: center;
-                padding: 0 20px 0 10px;
-                margin-right: 5px;
-                border-top-left-radius: 5px;
-                border-top-right-radius: 15px;
-                border-bottom-left-radius: 15px;
-                border-bottom-right-radius: 5px;
-            }
-
-            .po-text .text {
-                background-color: <?php echo esc_attr($po_bg_color); ?>;
-                color: <?php echo esc_attr($po_text_color); ?>;
-                margin: 0 0 0 -20px;
-                padding: 3px 10px;
-                width: 100%;
-                border-top-left-radius: 0;
-                border-top-right-radius: 15px;
-                border-bottom-left-radius: 15px;
-                border-bottom-right-radius: 5px;
-            }
-
-            @media only screen and (max-width: 600px) {
-                .po-text .number,
-                .po-text .text {
-                    font-size: <?php echo esc_attr($po_m_font_size); ?>px;
+if (!function_exists('smarty_po_admin_css')) {
+    /**
+     * Outputs admin CSS styles for the plugin settings page.
+     */
+    function smarty_po_admin_css() { 
+        if (is_admin()) { ?>
+            <style>
+                /* The switch - the box around the slider */
+                .smarty-toggle-switch {
+                    position: relative;
+                    display: inline-block;
+                    width: 60px;
+                    height: 34px;
                 }
-            }
-        </style>
-    <?php } ?>
 
-    <?php if (is_product()) { ?>
-        <style>
-            .po-text {
-                padding: 10px 0;
-            }
-        </style>
-    <?php } 
+                /* Hide default HTML checkbox */
+                .smarty-toggle-switch input {
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+
+                /* The slider */
+                .smarty-slider {
+                    position: absolute;
+                    cursor: pointer;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-color: #ccc;
+                    transition: .4s;
+                    border-radius: 34px;
+                }
+
+                .smarty-slider:before {
+                    position: absolute;
+                    content: "";
+                    height: 26px;
+                    width: 26px;
+                    left: 4px;
+                    bottom: 4px;
+                    background-color: white;
+                    transition: .4s;
+                    border-radius: 50%;
+                }
+
+                input:checked + .smarty-slider {
+                    background-color: #2196F3;
+                }
+
+                input:checked + .smarty-slider:before {
+                    transform: translateX(26px);
+                }
+
+                /* Rounded sliders */
+                .smarty-slider.round {
+                    border-radius: 34px;
+                }
+
+                .smarty-slider.round:before {
+                    border-radius: 50%;
+                }
+            </style><?php
+        } 
+    }
+    add_action('admin_head', 'smarty_po_admin_css');
 }
-add_action('wp_head', 'smarty_po_public_css');
+
+if (!function_exists('smarty_po_public_css')) {
+    /**
+     * Outputs public CSS styles for the promo label on WooCommerce pages.
+     */
+    function smarty_po_public_css() {
+        // Check if the current page is the WooCommerce shop page
+        if (is_shop() || is_product()) {
+            // Retrieve custom options for the promo styles
+            $po_border_color = get_option('smarty_po_border_color', '#222222');
+            $po_bg_color = get_option('smarty_po_bg_color', '#222222');
+            $po_text_color = get_option('smarty_po_text_color', '#ffffff');
+            $po_d_font_size = get_option('smarty_po_d_font_size', '16');
+            $po_m_font_size = get_option('smarty_po_m_font_size', '14'); ?>
+
+            <style>
+                .po-text {
+                    position: relative;
+                    top: 5px;
+                    font-weight: bold;
+                    display: flex;
+                    z-index: 10;
+                    border-radius: 10px;
+                }
+
+                .po-text .number {
+                    background-color: <?php echo esc_attr($po_bg_color); ?>;
+                    color: <?php echo esc_attr($po_text_color); ?>;
+                    font-size: <?php echo esc_attr($po_d_font_size); ?>px;
+                    align-content: center;
+                    padding: 0 20px 0 10px;
+                    margin-right: 5px;
+                    border: 2px solid <?php echo esc_attr($po_border_color); ?>;
+                }
+
+                .po-text .text {
+                    background-color: <?php echo esc_attr($po_bg_color); ?>;
+                    color: <?php echo esc_attr($po_text_color); ?>;
+                    margin: 0 0 0 -20px;
+                    padding: 3px 10px;
+                    width: 100%;
+                    border-top-left-radius: 0;
+                    border-top-right-radius: 25px;
+                    border-bottom-left-radius: 20px;
+                    border-bottom-right-radius: 0;
+                }
+
+                @media only screen and (max-width: 600px) {
+                    .po-text .number,
+                    .po-text .text {
+                        font-size: <?php echo esc_attr($po_m_font_size); ?>px;
+                    }
+                }
+            </style>
+        <?php } ?>
+
+        <?php if (is_product()) { ?>
+            <style>
+                .po-text {
+                    top: 12px;
+                    padding: 10px 0;
+                    width: fit-content;
+                }
+            </style>
+        <?php } 
+    }
+    add_action('wp_head', 'smarty_po_public_css');
+}
+
+if (!function_exists('smarty_po')) {
+    /**
+     * Checks if the Promo Options Manager plugin is active and promo labels are enabled.
+     *
+     * @return bool True if the plugin is active and promo labels are enabled, false otherwise.
+     */
+    function smarty_po() {
+        return function_exists('is_plugin_active') && 
+               is_plugin_active('smarty-promo-options-manager/smarty-promo-options-manager.php') && 
+               get_option('smarty_po_enable_labels', '1') === '1';
+    }
+}
