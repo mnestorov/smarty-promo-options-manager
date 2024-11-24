@@ -491,9 +491,11 @@ if (!function_exists('smarty_po_public_css')) {
 		
 		<?php if (is_shop()) { ?>
 			<style>
-                .po-text .text {
-                    line-height: 1;
-                }
+				@media only screen and (max-width: 600px) {
+					.po-text .text {
+						line-height: 1;
+					}
+				}
             </style>
 		<?php } ?>
 
