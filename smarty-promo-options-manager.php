@@ -488,6 +488,14 @@ if (!function_exists('smarty_po_public_css')) {
                 }
             </style>
         <?php } ?>
+		
+		<?php if (is_shop()) { ?>
+			<style>
+                .po-text .text {
+                    line-height: 1;
+                }
+            </style>
+		<?php } ?>
 
         <?php if (is_product()) { ?>
             <style>
