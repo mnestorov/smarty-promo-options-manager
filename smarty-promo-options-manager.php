@@ -51,7 +51,7 @@ if (!function_exists('smarty_po_register_settings')) {
             'sanitize_callback' => function($value) {
                 return $value === '1' ? '1' : '0';
             },
-            'default' => '1'
+            'default' => '0',
         ]);
         register_setting('smarty_po_settings_group', 'smarty_po_border_color');
         register_setting('smarty_po_settings_group', 'smarty_po_bg_color');
@@ -111,8 +111,8 @@ if (!function_exists('smarty_po_general_section_cb')) {
 
 if (!function_exists('smarty_po_checkbox_field_cb')) {
     function smarty_po_checkbox_field_cb($args) {
-        $option = get_option($args['id'], '');
-        $checked = checked(1, $option, false);
+        $option = get_option($args['id'], '0'); // Default is '0'
+        $checked = checked('1', $option, false);
         echo "<label class='smarty-toggle-switch'>";
         echo "<input type='checkbox' id='{$args['id']}' name='{$args['id']}' value='1' {$checked} />";
         echo "<span class='smarty-slider round'></span>";
