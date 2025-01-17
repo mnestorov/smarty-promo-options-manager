@@ -4,7 +4,7 @@
 
 - **Developed by:** Martin Nestorov 
     - Founder and Lead Developer at [Smarty Studio](https://smartystudio.net) | Explore more at [nestorov.dev](https://github.com/mnestorov)
-- **Plugin URI:** https://github.com/mnestorov/smarty-google-feed-generator
+- **Plugin URI:** https://github.com/mnestorov/smarty-promo-options-manager
 
 ## Overview
 
