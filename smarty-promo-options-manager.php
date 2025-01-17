@@ -3,8 +3,8 @@
  * Plugin Name:             SM - Promo Options Manager for WooCommerce
  * Plugin URI:              https://github.com/mnestorov/smarty-promo-options-manager
  * Description:             Manage promotional options for WooCommerce products with customizable labels and styles.
- * Version:                 1.0.0
- * Author:                  Smarty Studio | Martin Nestorov
+ * Version:                 1.0.1
+ * Author:                  Martin Nestorov
  * Author URI:              https://github.com/mnestorov
  * Text Domain:             smarty-promo-options-manager
  * Domain Path:             /languages/
@@ -18,26 +18,38 @@ if (!defined('WPINC')) {
 	die;
 }
 
-if (!function_exists('smarty_po_enqueue_scripts')) {
+if (!function_exists('smarty_po_enqueue_admin_scripts')) {
     /**
      * Enqueues admin scripts and styles for the settings page.
      *
      * @param string $hook_suffix The current admin page hook suffix.
      */
-    function smarty_po_enqueue_scripts($hook_suffix) {
+    function smarty_po_enqueue_admin_scripts($hook_suffix) {
         // Only add to the admin page of the plugin
         if ('woocommerce_page_smarty-po-settings' !== $hook_suffix) {
             return;
         }
 
-        wp_enqueue_style('select2-css', 'https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css');
-        wp_enqueue_script('select2-js', 'https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js', array('jquery'), '4.0.13', true);
+        wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js', array('jquery'), '4.0.13', true);
+        wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css', array(), '4.0.13');
+        wp_enqueue_script('smarty-po-admin-js', plugin_dir_url(__FILE__) . 'js/smarty-po-admin.js', array('jquery', 'select2'), '1.0.0', true);
+        wp_enqueue_style('smarty-po-admin-css', plugin_dir_url(__FILE__) . 'css/smarty-po-admin.css', array(), '1.0.0');
 
         // Enqueue style and script for using the WordPress color picker.
         wp_enqueue_style('wp-color-picker');
         wp_enqueue_script('wp-color-picker');
+
+        wp_localize_script(
+            'smarty-po-admin-js',
+            'smartyPromoOptionsManager',
+            array(
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'siteUrl' => site_url(),
+                'nonce'   => wp_create_nonce('smarty_promo_options_nonce'),
+            )
+        );
     }
-    add_action('admin_enqueue_scripts', 'smarty_po_enqueue_scripts');
+    add_action('admin_enqueue_scripts', 'smarty_po_enqueue_admin_scripts');
 }
 
 if (!function_exists('smarty_po_register_settings')) {
@@ -215,13 +227,43 @@ if (!function_exists('smarty_po_settings_page_content')) {
         ?>
        <div class="wrap">
             <h1><?php _e('Promo Options Manager | Settings', 'smarty-promo-options-manager'); ?></h1>
-            <form method="post" action="options.php">
-                <?php
-                settings_fields('smarty_po_settings_group');
-                do_settings_sections('smarty_po_settings_page');
-                ?>
-                <?php submit_button(); ?>
-            </form>
+            <div id="smarty-po-settings-container">
+                <div>
+                    <form method="post" action="options.php">
+                        <?php
+                        settings_fields('smarty_po_settings_group');
+                        do_settings_sections('smarty_po_settings_page');
+                        ?>
+                        <?php submit_button(); ?>
+                    </form>
+                </div>
+                <div id="smarty-po-tabs-container">
+                    <div>
+                        <h2 class="smarty-po-nav-tab-wrapper">
+                            <a href="#smarty-po-documentation" class="smarty-po-nav-tab smarty-po-nav-tab-active"><?php esc_html_e('Documentation', 'smarty-promo-options-manager'); ?></a>
+                            <a href="#smarty-po-changelog" class="smarty-po-nav-tab"><?php esc_html_e('Changelog', 'smarty-promo-options-manager'); ?></a>
+                        </h2>
+                        <div id="smarty-po-documentation" class="smarty-po-tab-content active">
+                            <div class="smarty-po-view-more-container">
+                                <p><?php esc_html_e('Click "View More" to load the plugin documentation.', 'smarty-promo-options-manager'); ?></p>
+                                <button id="smarty-po-load-readme-btn" class="button button-primary">
+                                    <?php esc_html_e('View More', 'smarty-promo-options-manager'); ?>
+                                </button>
+                            </div>
+                            <div id="smarty-po-readme-content" style="margin-top: 20px;"></div>
+                        </div>
+                        <div id="smarty-po-changelog" class="smarty-po-tab-content">
+                            <div class="smarty-po-view-more-container">
+                                <p><?php esc_html_e('Click "View More" to load the plugin changelog.', 'smarty-promo-options-manager'); ?></p>
+                                <button id="smarty-po-load-changelog-btn" class="button button-primary">
+                                    <?php esc_html_e('View More', 'smarty-promo-options-manager'); ?>
+                                </button>
+                            </div>
+                            <div id="smarty-po-changelog-content" style="margin-top: 20px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <style>
             .wp-color-result { vertical-align: middle; }
@@ -249,6 +291,68 @@ if (!function_exists('smarty_po_settings_page_content')) {
         </script>
         <?php
     }
+}
+
+if (!function_exists('smarty_po_load_readme')) {
+    /**
+     * AJAX handler to load and parse the README.md content.
+     */
+    function smarty_po_load_readme() {
+        check_ajax_referer('smarty_promo_options_nonce', 'nonce');
+    
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('You do not have sufficient permissions.');
+        }
+    
+        $readme_path = plugin_dir_path(__FILE__) . 'README.md';
+        if (file_exists($readme_path)) {
+            // Include Parsedown library
+            if (!class_exists('Parsedown')) {
+                require_once plugin_dir_path(__FILE__) . 'libs/Parsedown.php';
+            }
+    
+            $parsedown = new Parsedown();
+            $markdown_content = file_get_contents($readme_path);
+            $html_content = $parsedown->text($markdown_content);
+    
+            // Remove <img> tags from the content
+            $html_content = preg_replace('/<img[^>]*>/', '', $html_content);
+    
+            wp_send_json_success($html_content);
+        } else {
+            wp_send_json_error('README.md file not found.');
+        }
+    }    
+    add_action('wp_ajax_smarty_po_load_readme', 'smarty_po_load_readme');
+}
+
+if (!function_exists('smarty_po_load_changelog')) {
+    /**
+     * AJAX handler to load and parse the CHANGELOG.md content.
+     */
+    function smarty_po_load_changelog() {
+        check_ajax_referer('smarty_promo_options_nonce', 'nonce');
+    
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('You do not have sufficient permissions.');
+        }
+    
+        $changelog_path = plugin_dir_path(__FILE__) . 'CHANGELOG.md';
+        if (file_exists($changelog_path)) {
+            if (!class_exists('Parsedown')) {
+                require_once plugin_dir_path(__FILE__) . 'libs/Parsedown.php';
+            }
+    
+            $parsedown = new Parsedown();
+            $markdown_content = file_get_contents($changelog_path);
+            $html_content = $parsedown->text($markdown_content);
+    
+            wp_send_json_success($html_content);
+        } else {
+            wp_send_json_error('CHANGELOG.md file not found.');
+        }
+    }
+    add_action('wp_ajax_smarty_po_load_changelog', 'smarty_po_load_changelog');
 }
 
 if (!function_exists('smarty_po_label_shortcode')) {
