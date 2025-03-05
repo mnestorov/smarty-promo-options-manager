@@ -454,7 +454,7 @@ if (!function_exists('smarty_po_get_variation_label')) {
      *     <span class="text" style="background-color:#222222;color:#ffffff;">Use promo code BLACK15</span>
      * </div>
      */
-    function smarty_po_get_variation_label($variation_id, $additional_discount = 15) {
+    function smarty_po_get_variation_label($variation_id) {
         // Fetch variation product object
         $single_variation = new WC_Product_Variation($variation_id);
 
@@ -472,6 +472,7 @@ if (!function_exists('smarty_po_get_variation_label')) {
         $po_bg_color = get_option('smarty_po_bg_color', '#222222');
         $po_text_color = get_option('smarty_po_text_color', '#ffffff');
         $po_text = get_option('smarty_po_text', 'Use promo code BLACK15');
+		$po_number = (int) get_option('smarty_po_number', 10);
 
         // Calculate base discount percentage
         $discount_percentage = 0;
@@ -480,7 +481,7 @@ if (!function_exists('smarty_po_get_variation_label')) {
         }
 
         // Add additional discount
-        $total_discount = $discount_percentage > 0 ? $discount_percentage + $additional_discount : $additional_discount;
+        $total_discount = $discount_percentage > 0 ? $discount_percentage + $po_number : $po_number;
 
         // Generate label content
         $label_text = "<span class='number' style='background-color:{$po_text_color};color:{$po_bg_color};'>-{$total_discount}%</span>";
