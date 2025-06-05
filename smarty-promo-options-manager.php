@@ -44,6 +44,7 @@ if (!function_exists('smarty_po_enqueue_admin_scripts')) {
     /**
      * Enqueues admin scripts and styles for the settings page.
      *
+     * @since 1.0.0
      * @param string $hook_suffix The current admin page hook suffix.
      */
     function smarty_po_enqueue_admin_scripts($hook_suffix) {
@@ -77,6 +78,8 @@ if (!function_exists('smarty_po_enqueue_admin_scripts')) {
 if (!function_exists('smarty_po_register_settings')) {
     /**
      * Registers settings, sections, and fields for the plugin.
+     * 
+     * @since 1.0.0
      */
     function smarty_po_register_settings() {
         // Register settings
@@ -87,13 +90,45 @@ if (!function_exists('smarty_po_register_settings')) {
             },
             'default' => '0',
         ]);
-        register_setting('smarty_po_settings_group', 'smarty_po_border_color');
-        register_setting('smarty_po_settings_group', 'smarty_po_bg_color');
-        register_setting('smarty_po_settings_group', 'smarty_po_text_color');
-        register_setting('smarty_po_settings_group', 'smarty_po_text');
-        register_setting('smarty_po_settings_group', 'smarty_po_number');
-        register_setting('smarty_po_settings_group', 'smarty_po_d_font_size');
-        register_setting('smarty_po_settings_group', 'smarty_po_m_font_size');
+
+        $color_fields = ['smarty_po_border_color', 'smarty_po_bg_color', 'smarty_po_text_color'];
+        foreach ($color_fields as $field) {
+            register_setting('smarty_po_settings_group', $field, [
+                'type' => 'string',
+                'sanitize_callback' => 'sanitize_hex_color',
+            ]);
+        }
+
+        // Font sizes: integer between 10–30
+        $font_size_callback = function ($value) {
+            $int = intval($value);
+            return ($int < 10) ? 10 : (($int > 30) ? 30 : $int);
+        };
+
+        // Text field for promo message
+        register_setting('smarty_po_settings_group', 'smarty_po_text', [
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
+
+        // Float promo percent (cast to float and limit to 0–100)
+        register_setting('smarty_po_settings_group', 'smarty_po_number', [
+            'type' => 'number',
+            'sanitize_callback' => function ($value) {
+                $float = floatval($value);
+                return ($float < 0) ? 0 : (($float > 100) ? 100 : $float);
+            },
+        ]);
+
+        register_setting('smarty_po_settings_group', 'smarty_po_d_font_size', [
+            'type' => 'integer',
+            'sanitize_callback' => $font_size_callback,
+        ]);
+
+        register_setting('smarty_po_settings_group', 'smarty_po_m_font_size', [
+            'type' => 'integer',
+            'sanitize_callback' => $font_size_callback,
+        ]);
         
         // Add settings sections
         add_settings_section('smarty_po_general_section', 'General', 'smarty_po_general_section_cb', 'smarty_po_settings_page');
@@ -122,7 +157,13 @@ if (!function_exists('smarty_po_register_settings')) {
 
 if (!function_exists('smarty_po_register_settings_page')) {
     /**
-     * Registers the plugin settings page in the WooCommerce menu.
+     * Registers the plugin settings page in the WooCommerce admin menu.
+     *
+     * Adds a submenu item under the "WooCommerce" menu titled "Promo Options Manager".
+     * The submenu loads the settings page content using the callback function.
+     *
+     * @since 1.0.0
+     * @return void
      */
     function smarty_po_register_settings_page() {
         add_submenu_page(
@@ -138,12 +179,34 @@ if (!function_exists('smarty_po_register_settings_page')) {
 }
 
 if (!function_exists('smarty_po_general_section_cb')) {
+    /**
+     * Outputs the description for the general settings section.
+     *
+     * Displays a short paragraph explaining the purpose of the section.
+     *
+     * @since 1.0.0
+     * @return void
+     */
     function smarty_po_general_section_cb() {
         echo '<p>Enable or disable promo labels for products.</p>';
     }
 }
 
 if (!function_exists('smarty_po_checkbox_field_cb')) {
+    /**
+     * Renders a custom checkbox toggle switch for a settings field.
+     *
+     * Uses a custom-styled toggle switch with the "smarty-toggle-switch" class.
+     * Retrieves the current option value to determine whether the checkbox is checked.
+     *
+     * @since 1.0.0
+     * @param array $args {
+     *     Array of arguments passed to the callback.
+     *
+     *     @type string $id The ID of the settings field.
+     * }
+     * @return void
+     */
     function smarty_po_checkbox_field_cb($args) {
         $option = get_option($args['id'], '0'); // Default is '0'
         $checked = checked('1', $option, false);
@@ -155,8 +218,14 @@ if (!function_exists('smarty_po_checkbox_field_cb')) {
 }
 
 if (!function_exists('smarty_po_colors_section_cb')) {
-    /**
+     /**
      * Callback for the colors section description.
+     *
+     * Outputs an explanatory message for the color customization section
+     * in the plugin settings.
+     *
+     * @since 1.0.0
+     * @return void
      */
     function smarty_po_colors_section_cb() {
         echo '<p>Customize the colors for promo elements in your WooCommerce shop and single product pages.</p>';
@@ -165,9 +234,17 @@ if (!function_exists('smarty_po_colors_section_cb')) {
 
 if (!function_exists('smarty_po_color_field_cb')) {
     /**
-     * Callback for rendering color input fields.
+     * Callback for rendering a color input field.
      *
-     * @param array $args Arguments for the field.
+     * Outputs a WordPress color picker input tied to the given option.
+     *
+     * @since 1.0.0
+     * @param array $args {
+     *     Arguments for the color field.
+     *
+     *     @type string $id The ID (and option name) of the field.
+     * }
+     * @return void
      */
     function smarty_po_color_field_cb($args) {
         $option = get_option($args['id'], '');
@@ -178,6 +255,11 @@ if (!function_exists('smarty_po_color_field_cb')) {
 if (!function_exists('smarty_po_font_sizes_section_cb')) {
     /**
      * Callback for the font sizes section description.
+     *
+     * Outputs a short note describing the purpose of the font size controls.
+     *
+     * @since 1.0.0
+     * @return void
      */
     function smarty_po_font_sizes_section_cb() {
         echo '<p>Customize the font sizes for promo elements in your WooCommerce shop and single product pages.</p>';
@@ -186,9 +268,17 @@ if (!function_exists('smarty_po_font_sizes_section_cb')) {
 
 if (!function_exists('smarty_po_d_font_size_field_cb')) {
     /**
-     * Callback for rendering desktop font size input.
+     * Callback for rendering the desktop font size input slider.
      *
-     * @param array $args Arguments for the field.
+     * Outputs a range slider for selecting the font size (in pixels) for desktop views.
+     *
+     * @since 1.0.0
+     * @param array $args {
+     *     Arguments for the slider field.
+     *
+     *     @type string $id The ID (and option name) of the field.
+     * }
+     * @return void
      */
     function smarty_po_d_font_size_field_cb($args) {
         $option = get_option($args['id'], '14');
@@ -199,9 +289,17 @@ if (!function_exists('smarty_po_d_font_size_field_cb')) {
 
 if (!function_exists('smarty_po_m_font_size_field_cb')) {
     /**
-     * Callback for rendering mobile font size input.
+     * Callback for rendering the mobile font size input slider.
      *
-     * @param array $args Arguments for the field.
+     * Outputs a range slider for selecting the font size (in pixels) for mobile views.
+     *
+     * @since 1.0.0
+     * @param array $args {
+     *     Arguments for the slider field.
+     *
+     *     @type string $id The ID (and option name) of the field.
+     * }
+     * @return void
      */
     function smarty_po_m_font_size_field_cb($args) {
         $option = get_option($args['id'], '14');
@@ -213,6 +311,11 @@ if (!function_exists('smarty_po_m_font_size_field_cb')) {
 if (!function_exists('smarty_po_text_section_cb')) {
     /**
      * Callback for the text section description.
+     *
+     * Provides instructions or context about setting custom promo text.
+     *
+     * @since 1.0.0
+     * @return void
      */
     function smarty_po_text_section_cb() {
         echo '<p>Use custom text for promo label.</p>';
@@ -221,7 +324,13 @@ if (!function_exists('smarty_po_text_section_cb')) {
 
 if (!function_exists('smarty_po_text_field_cb')) {
     /**
-     * Callback for rendering the promo text input field.
+     * Callback for rendering the promo label text input.
+     *
+     * Renders a standard input field for users to define promo label text.
+     *
+     * @since 1.0.0
+     * @param array $args Optional. Arguments for the field. Not currently used.
+     * @return void
      */
     function smarty_po_text_field_cb($args) {
         $option = get_option('smarty_po_text', 'Example text'); // Default is empty
@@ -232,7 +341,12 @@ if (!function_exists('smarty_po_text_field_cb')) {
 
 if (!function_exists('smarty_po_number_field_cb')) {
     /**
-     * Callback for rendering the promo number input field.
+     * Callback for rendering the numeric input for discount threshold.
+     *
+     * Outputs a number input field used to determine the minimum discount value for the promo label.
+     *
+     * @since 1.0.0
+     * @return void
      */
     function smarty_po_number_field_cb() {
         $option = get_option('smarty_po_number');
@@ -243,7 +357,18 @@ if (!function_exists('smarty_po_number_field_cb')) {
 
 if (!function_exists('smarty_po_settings_page_content')) {
     /**
-     * Renders the plugin settings page content.
+     * Renders the plugin settings page content in the WordPress admin.
+     *
+     * Outputs the full HTML and JavaScript required to:
+     * - Display plugin settings fields and sections
+     * - Provide a tabbed UI for "Documentation" and "Changelog"
+     * - Initialize the WordPress color picker for color fields
+     * - Dynamically update displayed values for sliders (e.g., font size)
+     *
+     * This page is registered via `add_submenu_page()` under the WooCommerce admin menu.
+     *
+     * @since 1.0.0
+     * @return void
      */
     function smarty_po_settings_page_content() {
         ?>
@@ -318,6 +443,8 @@ if (!function_exists('smarty_po_settings_page_content')) {
 if (!function_exists('smarty_po_load_readme')) {
     /**
      * AJAX handler to load and parse the README.md content.
+     * 
+     * @since 1.0.0
      */
     function smarty_po_load_readme() {
         check_ajax_referer('smarty_promo_options_nonce', 'nonce');
@@ -351,6 +478,8 @@ if (!function_exists('smarty_po_load_readme')) {
 if (!function_exists('smarty_po_load_changelog')) {
     /**
      * AJAX handler to load and parse the CHANGELOG.md content.
+     * 
+     * @since 1.0.0
      */
     function smarty_po_load_changelog() {
         check_ajax_referer('smarty_promo_options_nonce', 'nonce');
@@ -381,6 +510,7 @@ if (!function_exists('smarty_po_label_shortcode')) {
     /**
      * Shortcode to display a promotional label for WooCommerce products.
      *
+     * @since 1.0.0
      * @return string The generated HTML for the promotional label or an empty string if not on a product page.
      */
     function smarty_po_label_shortcode() {
@@ -388,6 +518,15 @@ if (!function_exists('smarty_po_label_shortcode')) {
 
         if (!$product instanceof WC_Product) {
             return ''; // Ensure it's only used in a product loop
+        }
+
+        // Generate a unique cache key
+        $product_id = $product->get_id();
+        $cache_key  = 'smarty_po_label_' . $product_id;
+        $cached     = wp_cache_get($cache_key, 'smarty_po');
+
+        if ($cached !== false) {
+            return $cached;
         }
 
         // Get plugin settings
@@ -430,6 +569,9 @@ if (!function_exists('smarty_po_label_shortcode')) {
         $label_text = "<span class='number' style='background-color:{$po_text_color};color:{$po_bg_color};'>-{$label_discount}%</span>";
         $label_text .= " <span class='text' style='background-color:{$po_bg_color};color:{$po_text_color};'>{$po_text}</span>";
 
+        // Cache the output
+        wp_cache_set($cache_key, $output, 'smarty_po', HOUR_IN_SECONDS);
+
         // Return the label HTML
         return '<div class="po-text">' . $label_text . '</div>';
     }
@@ -443,6 +585,8 @@ if (!function_exists('smarty_po_get_variation_label')) {
      * This function calculates the total discount percentage for a variation, including 
      * an additional discount, and returns the styled promotional label HTML.
      *
+     * @since 1.0.0
+     * 
      * @param int $variation_id The ID of the WooCommerce product variation.
      * @param int $additional_discount The additional discount percentage to apply (default: 15).
      *
@@ -495,6 +639,8 @@ if (!function_exists('smarty_po_get_variation_label')) {
 if (!function_exists('smarty_po_public_css')) {
     /**
      * Outputs public CSS styles for the promo label on WooCommerce pages.
+     * 
+     * @since 1.0.0
      */
     function smarty_po_public_css() {
         // Check if the current page is the WooCommerce shop page
@@ -574,6 +720,7 @@ if (!function_exists('smarty_po')) {
     /**
      * Checks if the Promo Options Manager plugin is active and promo labels are enabled.
      *
+     * @since 1.0.0
      * @return bool True if the plugin is active and promo labels are enabled, false otherwise.
      */
     function smarty_po() {
@@ -582,3 +729,10 @@ if (!function_exists('smarty_po')) {
                get_option('smarty_po_enable_labels', '1') === '1';
     }
 }
+
+// Add a links on the Plugins page
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
+    $links[] = '<a href="' . admin_url('admin.php?page=smarty-po-settings') . '">' . __('Settings', 'smarty-promo-options-manager') . '</a>';
+    $links[] = '<a href="https://github.com/mnestorov/smarty-promo-options-manager" target="_blank">' . __('GitHub', 'smarty-promo-options-manager') . '</a>';
+    return $links;
+});
